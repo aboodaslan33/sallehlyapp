@@ -118,7 +118,7 @@ init();
 function menuIcon(key){return ({dash:'🏠',users:'👥',orders:'🛒',topups:'🚚',services:'💼',packages:'⚙️',near:'📍',balance:'💳',ledger:'📘'}[key]||'•')}
 function roleName(){return state.user?.role==='admin'?'مدير النظام':state.user?.role==='technician'?'فني معتمد':'عميل'}
 function heroMetrics(items){return `<div class="hero-metrics-row">${items.map(x=>`<div class="metric-card-sm"><div class="mc-icon">${x.icon}</div><div class="mc-val">${x.value}</div><div class="mc-label">${x.label}</div><div class="mc-badge">↑ ${x.up||'نشط'}</div></div>`).join('')}</div>`}
-function dashboardHero(title,sub,items){return `<div class="dashboard-hero"><div class="hero-inner"><div class="hero-title-row"><div><h1>👋 ${title}</h1><p>${sub}</p></div><button class="export-btn" onclick="toast('ميزة تصدير التقرير جاهزة للتطوير')">⇩ تصدير التقرير</button></div>${heroMetrics(items)}</div></div>`}
+function dashboardHero(title,sub,items){return `<div class="dh-slim"><div class="dh-slim-top"><span class="dh-slim-title">👋 ${title}</span></div>${heroMetrics(items)}</div>`}
 function activityBox(){return `<div class="dash-card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h2>الأنشطة الأخيرة</h2><button class="btn ghost mini">عرض الكل</button></div><div class="activity-list"><div class="activity-item"><div><b>تم تسجيل مستخدم جديد</b><br><small class="muted">منذ 5 دقائق</small></div><span class="activity-icon">👤</span></div><div class="activity-item"><div><b>طلب خدمة كهرباء جديد</b><br><small class="muted">منذ 15 دقيقة</small></div><span class="activity-icon">⚡</span></div><div class="activity-item"><div><b>تم إكمال طلب صيانة</b><br><small class="muted">منذ 30 دقيقة</small></div><span class="activity-icon">✅</span></div><div class="activity-item"><div><b>إضافة خدمة جديدة</b><br><small class="muted">منذ ساعة</small></div><span class="activity-icon">➕</span></div></div></div>`}
 function promoBox(title='طور خدماتك', text='قدم أفضل تجربة لعملائك وزد من أرباحك'){return `<div class="dash-card promo-card"><div class="promo-illustration">👨‍🔧</div><h2>${title}</h2><p class="muted">${text}</p><button class="btn ghost">← استكشف المزيد</button></div>`}
 function categoriesBox(){let cats=[['أعمال البناء','🏗️','12 خدمة'],['الصيانة والإصلاح','🔧','18 خدمة'],['التنظيف','🧽','16 خدمة'],['نقل وتوصيل','🚚','10 خدمة'],['أخرى','•••','8 خدمات']];return `<div class="dash-card" style="margin-bottom:18px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h2>الفئات الرئيسية</h2><button class="btn ghost mini">عرض الكل</button></div><div class="category-row">${cats.map(c=>`<div class="category-card"><div><h3>${c[0]}</h3><small>${c[2]}</small></div><div class="cat-icon">${c[1]}</div></div>`).join('')}</div></div>`}
@@ -365,7 +365,7 @@ function v11SelectService(service){
     setTimeout(()=>{ if($('#searchTechQ')) $('#searchTechQ').value=service; if($('#searchService')) $('#searchService').value=service; searchTechnicians(); },180);
   }else{ toast('هذه الخدمة للعميل. يمكنك إدارة الطلبات من لوحتك.'); }
 }
-function v11Hero(title, sub){return `<div class="v11-hero"><div><span>صلّحلي PRO V11</span><h1>${title}</h1><p>${sub}</p></div><div class="v11-hero-badges"><b>🔒 صلاحيات</b><b>💬 شات</b><b>📍 مناطق</b><b>⭐ تقييم</b></div></div>`;}
+function v11Hero(title, sub){return `<div class="dh-slim"><div class="dh-slim-top"><span class="dh-slim-title">👋 ${title}</span>${sub?`<span class="dh-slim-sub">${sub}</span>`:''}</div></div>`;}
 function v11Improvements(){return `<div class="v11-improve-grid"><div><b>📌 طلبات بدون تداخل</b><small>الفني لا يقبل طلب جديد قبل إنهاء الطلب النشط.</small></div><div><b>🧾 سجل عمليات</b><small>كل طلب وشحن ورصيد محفوظ للنظام.</small></div><div><b>💬 شات بعد القبول</b><small>المحادثة بين العميل والفني مرتبطة بالطلب.</small></div><div><b>📍 محافظة ومنطقة</b><small>بحث حسب عمان، الزرقاء، إربد وباقي المحافظات.</small></div></div>`;}
 
 const __v11CustDashBase = custDash;
@@ -1404,7 +1404,7 @@ login=function(){
   const css=`
   .secure-hint{background:#eef7ff;border:1px solid #cfe3ff;color:#173263}.secure-hint b{color:#0b3bd8}.v23-auth{padding:18px}.v23-auth-shell{width:min(96vw,1080px)}.v23-auth-card h1{font-size:clamp(30px,5vw,52px)}.secure-list{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:18px}.secure-list span{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25);padding:8px 12px;border-radius:999px;font-weight:900}
   @media(max-width:920px){
-    .nav{height:auto;min-height:76px;padding:12px 16px}.brand{font-size:26px}.menu{display:grid!important}.links{position:fixed;top:76px;left:12px;right:12px;background:rgba(255,255,255,.97);border:1px solid #dbe7ff;border-radius:24px;box-shadow:0 24px 70px rgba(20,37,83,.16);padding:14px;display:none;z-index:50}.open .links{display:grid;gap:10px}.links a,.links button{width:100%;justify-content:center;text-align:center}.hero,.pro-hero{grid-template-columns:1fr!important;padding:28px 18px!important}.hero h1{font-size:clamp(32px,8vw,48px)!important}.phone{display:none!important}.section,.page{padding:18px!important}.grid,.feature-grid,.steps-grid,.dash-grid,.dash-grid.two,.v20-main-grid{grid-template-columns:1fr!important}.admin-shell{display:block!important}.admin-sidebar{position:relative!important;inset:auto!important;width:100%!important;min-height:auto!important;border-radius:0 0 26px 26px!important;padding:18px!important}.admin-logo{font-size:28px!important}.admin-menu{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.admin-menu .sidebtn{min-height:56px!important;padding:12px!important}.admin-main{padding:16px!important}.admin-top{display:grid!important;grid-template-columns:1fr!important;gap:12px}.admin-search{width:100%!important}.admin-actions{justify-content:space-between!important}.dashboard-hero,.v6-hero{padding:22px!important;border-radius:26px!important}.stats-grid,.hero-stats{grid-template-columns:1fr 1fr!important}.stat-card{min-height:120px!important}.v20-live-strip{border-radius:24px!important;padding:16px!important}.v20-live-card{min-width:210px!important}.v20-search-grid,.v20-request-form,.form.two{grid-template-columns:1fr!important}.v20-tech-card{grid-template-columns:1fr!important;text-align:start}.v20-tech-actions{display:grid!important;grid-template-columns:1fr 1fr}.request-card,.v21-request-card,.v20-request-card{padding:16px!important}.request-head,.v20-request-head{display:block!important}.request-meta,.v21-details{grid-template-columns:1fr!important}.table-wrap{overflow:auto}.auth-shell,.v23-auth-shell{grid-template-columns:1fr!important;border-radius:26px!important}.auth-side,.v23-auth-side{display:none!important}.auth-card,.v23-auth-card{padding:28px 18px!important}.topbar{display:grid!important;gap:10px}.sidebar{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));position:relative!important;width:100%!important}.panel{grid-template-columns:1fr!important}.v22-grid{grid-template-columns:1fr!important}.v22-upload{min-height:112px!important}.problem-preview,.v22-preview{max-width:100%!important;width:100%!important}.chat-page .card{padding:14px!important}.chat-box{height:48vh!important}.chat-form{display:grid!important;grid-template-columns:1fr!important;gap:10px}.clean-logout,.v17-top-logout{font-size:14px!important;padding:10px 12px!important}
+    .nav{height:auto;min-height:76px;padding:12px 16px}.brand{font-size:26px}.menu{display:grid!important}.links{position:fixed;top:76px;left:12px;right:12px;background:rgba(255,255,255,.97);border:1px solid #dbe7ff;border-radius:24px;box-shadow:0 24px 70px rgba(20,37,83,.16);padding:14px;display:none;z-index:50}.open .links{display:grid;gap:10px}.links a,.links button{width:100%;justify-content:center;text-align:center}.hero,.pro-hero{grid-template-columns:1fr!important;padding:28px 18px!important}.hero h1{font-size:clamp(32px,8vw,48px)!important}.phone{display:none!important}.section,.page{padding:18px!important}.grid,.feature-grid,.steps-grid,.dash-grid,.dash-grid.two,.v20-main-grid{grid-template-columns:1fr!important}.admin-shell{display:block!important}.admin-sidebar{position:relative!important;inset:auto!important;width:100%!important;min-height:auto!important;border-radius:0 0 26px 26px!important;padding:18px!important}.admin-logo{font-size:28px!important}.admin-menu{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.admin-menu .sidebtn{min-height:56px!important;padding:12px!important}.admin-main{padding:16px!important}.admin-top{display:grid!important;grid-template-columns:1fr!important;gap:12px}.admin-search{width:100%!important}.admin-actions{justify-content:space-between!important}.dashboard-hero,.v6-hero{padding:22px!important;border-radius:26px!important}.stats-grid,.hero-stats{grid-template-columns:1fr 1fr!important}.stat-card{min-height:auto!important}.metric-card-sm{padding:8px 4px!important}.mc-icon{font-size:16px!important;margin-bottom:4px!important}.mc-val{font-size:16px!important}.mc-label{font-size:9px!important}.mc-badge{font-size:8px!important}.v20-live-strip{border-radius:24px!important;padding:16px!important}.v20-live-card{min-width:210px!important}.v20-search-grid,.v20-request-form,.form.two{grid-template-columns:1fr!important}.v20-tech-card{grid-template-columns:1fr!important;text-align:start}.v20-tech-actions{display:grid!important;grid-template-columns:1fr 1fr}.request-card,.v21-request-card,.v20-request-card{padding:16px!important}.request-head,.v20-request-head{display:block!important}.request-meta,.v21-details{grid-template-columns:1fr!important}.table-wrap{overflow:auto}.auth-shell,.v23-auth-shell{grid-template-columns:1fr!important;border-radius:26px!important}.auth-side,.v23-auth-side{display:none!important}.auth-card,.v23-auth-card{padding:28px 18px!important}.topbar{display:grid!important;gap:10px}.sidebar{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));position:relative!important;width:100%!important}.panel{grid-template-columns:1fr!important}.v22-grid{grid-template-columns:1fr!important}.v22-upload{min-height:112px!important}.problem-preview,.v22-preview{max-width:100%!important;width:100%!important}.chat-page .card{padding:14px!important}.chat-box{height:48vh!important}.chat-form{display:grid!important;grid-template-columns:1fr!important;gap:10px}.clean-logout,.v17-top-logout{font-size:14px!important;padding:10px 12px!important}
   }
   @media(max-width:520px){
     body{font-size:15px}.brand span,.admin-logo span{width:42px!important;height:42px!important}.btn.big,.btn{min-height:48px}.stats-grid,.hero-stats{grid-template-columns:1fr!important}.admin-menu{grid-template-columns:1fr}.v20-tech-actions{grid-template-columns:1fr}.v20-timeline{grid-template-columns:1fr!important}.v20-offer{grid-template-columns:1fr!important}.v20-live-card{min-width:185px!important;padding:12px!important}.dashboard-hero h1{font-size:32px!important}.auth-card h1{font-size:34px!important}.nav .btn{padding:10px 12px!important}.toast{max-width:92vw!important}
@@ -1694,7 +1694,7 @@ login=function(){
 
   const oldTechBalance = window.v22TechBalance;
   window.v22TechBalance = function(me){
-    return `<div class="v25-balance-alert"><b>مهم للفني:</b> أول طلبين مكتملين مجاناً. بعد ذلك يجب توفر رصيد قبل تقديم أي عرض جديد، وإلا سيتم تحويلك تلقائياً إلى الباقات.</div>` + (oldTechBalance ? oldTechBalance(me) : balancePage(me));
+    return `<div class="v25-balance-alert-sm">⚠️ <b>أول طلبين مجاناً</b> — بعدها يلزم رصيد لتقديم عروض.</div>` + (oldTechBalance ? oldTechBalance(me) : balancePage(me));
   };
 })();
 
@@ -2761,4 +2761,387 @@ window.addEventListener('error', function(e){
     </section>`;
     window.scrollTo({top:0,behavior:'smooth'});
   };
+})();
+
+
+/* ===== Sallehly V50 - Premium Login Page ===== */
+;(function(){
+
+login = function(){
+  state.tab = 'dash';
+  document.body.classList.remove('dashboard-mode');
+  app.innerHTML = `
+  <div class="v50-login-page">
+    <div class="v50-login-bg">
+      <div class="v50-blob v50-blob1"></div>
+      <div class="v50-blob v50-blob2"></div>
+    </div>
+    <div class="v50-login-container">
+
+      <!-- Logo -->
+      <div class="v50-logo">
+        <div class="v50-logo-icon">ص</div>
+        <span>صلّحلي</span>
+      </div>
+
+      <!-- Card -->
+      <div class="v50-card">
+        <h1 class="v50-title">مرحباً بعودتك 👋</h1>
+        <p class="v50-sub">سجّل دخولك للمتابعة</p>
+
+        <form class="v50-form" onsubmit="doLogin(event)">
+          <div class="v50-field">
+            <label>البريد الإلكتروني</label>
+            <div class="v50-input-wrap">
+              <span class="v50-input-icon">✉️</span>
+              <input id="email" type="email" autocomplete="email" placeholder="example@email.com" required>
+            </div>
+          </div>
+
+          <div class="v50-field">
+            <label>كلمة السر</label>
+            <div class="v50-input-wrap">
+              <span class="v50-input-icon">🔒</span>
+              <input id="password" type="password" autocomplete="current-password" placeholder="••••••••" required>
+              <button type="button" class="v50-eye" onclick="
+                var inp=document.getElementById('password');
+                inp.type=inp.type==='password'?'text':'password';
+                this.textContent=inp.type==='password'?'👁️':'🙈';
+              ">👁️</button>
+            </div>
+          </div>
+
+          <button class="v50-btn-primary" type="submit">
+            <span>تسجيل الدخول</span>
+            <span class="v50-arrow">←</span>
+          </button>
+        </form>
+
+        <div class="v50-divider"><span>أو</span></div>
+
+        <button class="v50-btn-secondary" onclick="register('customer')">
+          إنشاء حساب جديد
+        </button>
+
+        <p class="v50-hint">🔐 حساب الإدارة يُضبط من السيرفر فقط</p>
+      </div>
+
+    </div>
+  </div>`;
+};
+
+// CSS
+const css = `
+.v50-login-page {
+  min-height: 100vh;
+  background: #0d0d1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.v50-login-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+.v50-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.35;
+}
+.v50-blob1 {
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, #6c3dd6, #3b1fa8);
+  top: -100px; right: -100px;
+}
+.v50-blob2 {
+  width: 300px; height: 300px;
+  background: radial-gradient(circle, #1e40af, #0ea5e9);
+  bottom: -80px; left: -80px;
+}
+.v50-login-container {
+  width: 100%;
+  max-width: 420px;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+.v50-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  font-size: 22px;
+  font-weight: 800;
+}
+.v50-logo-icon {
+  width: 46px; height: 46px;
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 900; color: #fff;
+  box-shadow: 0 8px 24px rgba(124,58,237,0.4);
+}
+.v50-card {
+  width: 100%;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 24px;
+  padding: 32px 28px;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.4);
+}
+.v50-title {
+  font-size: 26px;
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 6px;
+  text-align: center;
+}
+.v50-sub {
+  font-size: 14px;
+  color: rgba(255,255,255,0.5);
+  text-align: center;
+  margin: 0 0 28px;
+}
+.v50-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.v50-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.v50-field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.7);
+}
+.v50-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.v50-input-icon {
+  position: absolute;
+  right: 14px;
+  font-size: 15px;
+  pointer-events: none;
+}
+.v50-input-wrap input {
+  width: 100%;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  padding: 13px 42px 13px 44px;
+  color: #fff;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+  font-family: inherit;
+  text-align: right;
+}
+.v50-input-wrap input:focus {
+  border-color: #7c3aed;
+  background: rgba(124,58,237,0.1);
+}
+.v50-input-wrap input::placeholder { color: rgba(255,255,255,0.25); }
+.v50-eye {
+  position: absolute;
+  left: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px;
+  line-height: 1;
+}
+.v50-btn-primary {
+  width: 100%;
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  padding: 15px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 6px;
+  box-shadow: 0 8px 24px rgba(124,58,237,0.4);
+  transition: transform 0.15s, box-shadow 0.15s;
+  font-family: inherit;
+}
+.v50-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 12px 32px rgba(124,58,237,0.5); }
+.v50-btn-primary:active { transform: translateY(0); }
+.v50-arrow { font-size: 18px; }
+.v50-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+  color: rgba(255,255,255,0.25);
+  font-size: 13px;
+}
+.v50-divider::before,.v50-divider::after {
+  content:'';
+  flex: 1;
+  height: 1px;
+  background: rgba(255,255,255,0.1);
+}
+.v50-btn-secondary {
+  width: 100%;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.8);
+  border-radius: 14px;
+  padding: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  font-family: inherit;
+}
+.v50-btn-secondary:hover {
+  background: rgba(255,255,255,0.07);
+  border-color: rgba(255,255,255,0.25);
+}
+.v50-hint {
+  text-align: center;
+  font-size: 12px;
+  color: rgba(255,255,255,0.25);
+  margin: 16px 0 0;
+}
+`;
+
+const st = document.createElement('style');
+st.textContent = css;
+document.head.appendChild(st);
+
+})();
+
+
+/* ===== Sallehly V51 - Splash Screen ===== */
+;(function(){
+
+// Override showWelcomeModalForce with splash screen
+showWelcomeModalForce = function(){
+  const old = document.getElementById('welcomeOverlay');
+  if(old) old.remove();
+
+  const el = document.createElement('div');
+  el.id = 'splashScreen';
+  el.innerHTML = `
+    <div class="splash-inner">
+      <div class="splash-logo">ص</div>
+      <div class="splash-name">صلّحلي</div>
+      <div class="splash-tagline">الفني الأقرب بضغطة زر</div>
+      <div class="splash-dots">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(el);
+
+  // Auto dismiss after 2.5 seconds
+  setTimeout(()=>{
+    el.style.opacity = '0';
+    el.style.transform = 'scale(1.05)';
+    setTimeout(()=> el.remove(), 400);
+  }, 2500);
+};
+
+const splashCSS = `
+#splashScreen {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(160deg, #0d0d1a 0%, #1a1050 50%, #0d0d1a 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.splash-inner {
+  text-align: center;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.splash-logo {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  border-radius: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  font-weight: 900;
+  box-shadow: 0 20px 50px rgba(124,58,237,0.5);
+  animation: splashPop 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards;
+}
+.splash-name {
+  font-size: 32px;
+  font-weight: 900;
+  letter-spacing: -1px;
+  animation: splashFade 0.5s 0.2s ease forwards;
+  opacity: 0;
+}
+.splash-tagline {
+  font-size: 14px;
+  color: rgba(255,255,255,0.5);
+  animation: splashFade 0.5s 0.4s ease forwards;
+  opacity: 0;
+}
+.splash-dots {
+  display: flex;
+  gap: 8px;
+  margin-top: 24px;
+  animation: splashFade 0.5s 0.6s ease forwards;
+  opacity: 0;
+}
+.splash-dots span {
+  width: 8px;
+  height: 8px;
+  background: #7c3aed;
+  border-radius: 50%;
+  animation: splashDot 1.2s infinite ease-in-out;
+}
+.splash-dots span:nth-child(2) { animation-delay: 0.2s; }
+.splash-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes splashPop {
+  from { transform: scale(0.5); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+@keyframes splashFade {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+@keyframes splashDot {
+  0%,80%,100% { transform: scale(0.6); opacity: 0.4; }
+  40%         { transform: scale(1.2); opacity: 1;   }
+}
+`;
+
+const st = document.createElement('style');
+st.textContent = splashCSS;
+document.head.appendChild(st);
+
 })();
