@@ -13,7 +13,7 @@ const Database = require('better-sqlite3');
 const http = require('http');
 const crypto = require('crypto');
 const { Server } = require('socket.io');
-const { Resend } = require('resend');
+
 
 const app = express();
 const loginLimiter = rateLimit({
@@ -51,13 +51,7 @@ const messagesLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false
 });
-const otpLimiter = rateLimit({
-  windowMs: 10 * 60 * 1000,
-  max: 3,
-  message: { error: 'طلبت كوداً كثيراً، انتظر 10 دقائق' },
-  standardHeaders: true,
-  legacyHeaders: false
-});
+
 
 // Render/Proxy fix: trust the first reverse proxy so express-rate-limit
 // can read X-Forwarded-For safely without throwing ERR_ERL_UNEXPECTED_X_FORWARDED_FOR.
@@ -74,9 +68,7 @@ const io = new Server(server, {
 });
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? (()=>{ throw new Error('JWT_SECRET is required in production'); })() : 'local_development_secret_change_me');
-const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
-const RESEND_FROM = process.env.RESEND_FROM || 'onboarding@resend.dev';
-const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
+
 const BASE = __dirname;
 const DATA_DIR = path.join(BASE, 'data');
 const UPLOAD_DIR = path.join(BASE, 'public', 'uploads');
@@ -108,12 +100,12 @@ app.use(helmet({
     useDefaults: true,
     directives: {
       "default-src": ["'self'"],
-      "script-src": ["'self'", "'unsafe-inline'", "https://unpkg.com"],
+      "script-src": ["'self'", "'unsafe-inline'", "https://unpkg.com", "https://www.gstatic.com"],
       "script-src-attr": ["'unsafe-inline'"],
       "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://unpkg.com"],
       "font-src": ["'self'", "https://fonts.gstatic.com", "data:"],
       "img-src": ["'self'", "data:", "blob:", "https://*.tile.openstreetmap.org", "https://tile.openstreetmap.org", "https://unpkg.com"],
-      "connect-src": ["'self'", "wss:", "https://*.tile.openstreetmap.org", "https://tile.openstreetmap.org", "https://unpkg.com"],
+      "connect-src": ["'self'", "wss:", "https://*.tile.openstreetmap.org", "https://tile.openstreetmap.org", "https://unpkg.com", "https://identitytoolkit.googleapis.com", "https://securetoken.googleapis.com"],
       "media-src": ["'self'", "blob:"],
       "frame-src": ["'self'", "https://www.openstreetmap.org", "https://maps.google.com", "https://www.google.com"]
     }
@@ -200,16 +192,7 @@ CREATE TABLE IF NOT EXISTS users(
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS service_categories(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, icon TEXT DEFAULT '🔧');
-CREATE TABLE IF NOT EXISTS pending_users(
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  email TEXT NOT NULL,
-  otp TEXT NOT NULL,
-  otp_expires INTEGER NOT NULL,
-  attempts INTEGER DEFAULT 0,
-  data TEXT NOT NULL,
-  avatar_filename TEXT DEFAULT '',
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
+
 CREATE TABLE IF NOT EXISTS packages(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
@@ -396,40 +379,7 @@ const IS_PROD = process.env.NODE_ENV === 'production';
 const COOKIE_OPTS = { httpOnly: true, sameSite: 'strict', secure: IS_PROD, maxAge: 7 * 24 * 60 * 60 * 1000 };
 function sign(user){ return jwt.sign({ id:user.id, role:user.role, name:user.name }, JWT_SECRET, { expiresIn:'7d' }); }
 
-async function sendOtpEmail(toEmail, otp, name) {
-  if (!resend) {
-    // Development fallback: print to console
-    console.log(`\n📧 OTP for ${toEmail}: ${otp}\n`);
-    return true;
-  }
-  try {
-    await resend.emails.send({
-      from: RESEND_FROM,
-      to: toEmail,
-      subject: 'كود التحقق — صلّحلي',
-      html: `
-        <div dir="rtl" style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0d0d1a;color:#fff;border-radius:16px;padding:32px;">
-          <div style="text-align:center;margin-bottom:24px;">
-            <h1 style="color:#7c3aed;font-size:28px;margin:0;">صلّحلي</h1>
-            <p style="color:#aaa;font-size:13px;margin:4px 0 0;">منصة الصيانة في الأردن</p>
-          </div>
-          <p style="font-size:16px;">مرحباً <b>${name}</b>،</p>
-          <p style="color:#ccc;">استخدم الكود أدناه لتأكيد تسجيلك. صالح لمدة <b>10 دقائق</b>.</p>
-          <div style="text-align:center;margin:28px 0;">
-            <div style="display:inline-block;background:#1a1050;border:2px solid #7c3aed;border-radius:12px;padding:18px 40px;">
-              <span style="font-size:36px;font-weight:900;letter-spacing:10px;color:#fff;">${otp}</span>
-            </div>
-          </div>
-          <p style="color:#888;font-size:12px;text-align:center;">إذا لم تطلب هذا الكود، تجاهل هذا الإيميل.</p>
-        </div>
-      `
-    });
-    return true;
-  } catch(e) {
-    console.error('Resend error:', e.message);
-    return false;
-  }
-}
+
 function auth(req,res,next){
   const h = req.headers.authorization || '';
   const token = h.startsWith('Bearer ') ? h.slice(7) : req.cookies.token;
@@ -485,8 +435,8 @@ app.get('/api/payment-methods', auth, requireRole('technician'), (req,res)=>{
   res.json({paymentMethods: db.prepare('SELECT * FROM payment_methods').all()});
 });
 
-// ── STEP 1: تقبّل البيانات، تحقق منها، ابعث OTP ──────────────────────────
-app.post('/api/auth/register', registerLimiter, otpLimiter, upload.single('avatar'), async (req,res)=>{
+// ── STEP 1: 
+app.post('/api/auth/register', registerLimiter, upload.single('avatar'), async (req,res)=>{
   const role = clean(req.body.role);
   const name = clean(req.body.name || req.body.full_name || req.body.fullName || req.body.username);
   const email = clean(req.body.email).toLowerCase();
@@ -504,7 +454,10 @@ app.post('/api/auth/register', registerLimiter, otpLimiter, upload.single('avata
   if(role==='technician' && !avatar_filename) return res.status(400).json({error:'الصورة الشخصية مطلوبة للفني فقط'});
   if(!validator.isEmail(email)) return res.status(400).json({error:'البريد غير صحيح'});
   if(email.length > 100) return res.status(400).json({error:'البريد الإلكتروني طويل جداً'});
-  if(!/^07\d{8}$/.test(phone)) return res.status(400).json({error:'رقم الهاتف يجب أن يبدأ 07 ويتكون من 10 أرقام'});
+  if(!/^07[789]\d{7}$/.test(phone))
+    return res.status(400).json({
+      error:'رقم الهاتف يجب أن يبدأ بـ 077 أو 078 أو 079'
+    });
   if(password.length < 8) return res.status(400).json({error:'كلمة السر يجب أن تكون 8 أحرف على الأقل'});
   if(password.length > 72) return res.status(400).json({error:'كلمة السر طويلة جداً، الحد الأقصى 72 حرف'});
   if(role==='technician' && !/^\d{10}$/.test(national_number)) return res.status(400).json({error:'الرقم الوطني يجب أن يكون 10 أرقام'});
@@ -518,58 +471,40 @@ app.post('/api/auth/register', registerLimiter, otpLimiter, upload.single('avata
     return res.status(409).json({error:'رقم الهاتف مستخدم مسبقاً'});
 
   const hash = bcrypt.hashSync(password, 12);
-  const otp = String(Math.floor(100000 + Math.random() * 900000));
-  const otp_expires = Date.now() + 10 * 60 * 1000;
-
-  db.prepare('DELETE FROM pending_users WHERE email=?').run(email);
-  db.prepare('INSERT INTO pending_users(email,otp,otp_expires,data,avatar_filename) VALUES(?,?,?,?,?)')
-    .run(email, otp, otp_expires, JSON.stringify({role,name,email,phone,hash,national_number,city,services,areas}), avatar_filename);
-
-  const sent = await sendOtpEmail(email, otp, name);
-  if(!sent) return res.status(500).json({error:'تعذر إرسال البريد، حاول مرة أخرى'});
-
-  res.json({ok:true, step:'verify', message:'تم إرسال كود التحقق إلى بريدك الإلكتروني', email});
-});
-
-// ── STEP 2: التحقق من OTP وإنشاء الحساب ─────────────────────────────────
-app.post('/api/auth/verify-otp', (req,res)=>{
-  const email = clean(req.body.email).toLowerCase();
-  const otp = clean(req.body.otp);
-
-  const pending = db.prepare('SELECT * FROM pending_users WHERE email=?').get(email);
-  if(!pending) return res.status(400).json({error:'لا يوجد طلب تسجيل لهذا البريد، أعد التسجيل'});
-
-  if(Date.now() > pending.otp_expires){
-    db.prepare('DELETE FROM pending_users WHERE email=?').run(email);
-    return res.status(400).json({error:'انتهت صلاحية الكود، أعد التسجيل'});
-  }
-
-  if(pending.attempts >= 5){
-    db.prepare('DELETE FROM pending_users WHERE email=?').run(email);
-    return res.status(400).json({error:'محاولات كثيرة، أعد التسجيل'});
-  }
-
-  if(pending.otp !== otp){
-    db.prepare('UPDATE pending_users SET attempts=attempts+1 WHERE email=?').run(email);
-    const left = 5 - (pending.attempts + 1);
-    return res.status(400).json({error:`الكود غير صحيح. تبقى لك ${left} محاولات`});
-  }
-
-  try{
-    const d = JSON.parse(pending.data);
-    const avatar_url = pending.avatar_filename ? '/uploads/avatars/' + pending.avatar_filename : '';
-    const info = db.prepare('INSERT INTO users(role,name,email,phone,password_hash,national_number,city,services,areas,avatar_url,is_active) VALUES(?,?,?,?,?,?,?,?,?,?,1)')
-      .run(d.role, d.name, d.email, d.phone, d.hash, d.role==='technician'?d.national_number:null, d.city, d.services, d.areas, avatar_url);
-    db.prepare('DELETE FROM pending_users WHERE email=?').run(email);
+  try {
+    const avatar_url = avatar_filename ? '/uploads/avatars/' + avatar_filename : '';
+  
+    const info = db.prepare(`
+      INSERT INTO users(role,name,email,phone,password_hash,national_number,city,services,areas,avatar_url,is_active)
+      VALUES(?,?,?,?,?,?,?,?,?,?,1)
+    `).run(
+      role,
+      name,
+      email,
+      phone,
+      hash,
+      role === 'technician' ? national_number : null,
+      city,
+      services,
+      areas,
+      avatar_url
+    );
+  
     const user = db.prepare('SELECT * FROM users WHERE id=?').get(info.lastInsertRowid);
     const token = sign(user);
+  
     res.cookie('token', token, COOKIE_OPTS);
-    res.json({user:userPublic(user), message:'تم إنشاء الحساب بنجاح'});
-  } catch(e){
-    if(String(e.message).includes('UNIQUE')) return res.status(409).json({error:'البريد أو رقم الهاتف مستخدم مسبقاً'});
+    res.json({ ok:true, user:userPublic(user), message:'تم إنشاء الحساب بنجاح' });
+  
+  } catch(e) {
+    if(String(e.message).includes('UNIQUE')) {
+      return res.status(409).json({error:'البريد أو رقم الهاتف مستخدم مسبقاً'});
+    }
     res.status(500).json({error:'تعذر إنشاء الحساب'});
   }
 });
+// ── STEP 2: ال
+
 app.post('/api/auth/login', loginLimiter, (req,res)=>{
   const email = clean(req.body.email).toLowerCase();
   const password = String(req.body.password||'');

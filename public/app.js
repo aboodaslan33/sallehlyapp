@@ -1,6 +1,36 @@
 let state={user:null,meta:{services:[],packages:[],paymentMethods:[],cities:[]},tab:'dash',gps:null};
 let chatTimer=null, activeChatId=null;
+
 let socket=null;
+
+let firebaseAuthReady = null;
+async function getFirebaseAuth(){
+  if(firebaseAuthReady) return firebaseAuthReady;
+
+  firebaseAuthReady = (async ()=>{
+    const appMod = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js");
+    const authMod = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js");
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCkJhvGrWoZA3oi6eQU2Hm8S_d0TArTriI",
+      authDomain: "sallehlyotp-389c9.firebaseapp.com",
+      projectId: "sallehlyotp-389c9",
+      storageBucket: "sallehlyotp-389c9.firebasestorage.app",
+      messagingSenderId: "256082328492",
+      appId: "1:256082328492:web:8d58e30effbbad53acd809",
+      measurementId: "G-XRDF1TFJ3W"
+    };
+
+    const app = appMod.initializeApp(firebaseConfig);
+    const auth = authMod.getAuth(app);
+    console.log('FIREBASE LOADED');
+    
+
+    return { auth, ...authMod };
+  })();
+
+  return firebaseAuthReady;
+}
 function setupSocket(){
   if(typeof io==='undefined' || socket) return;
   socket=io();
@@ -54,11 +84,110 @@ function howPage(){app.innerHTML=`<div class="page"><h1>آلية العمل</h1>
 function techPage(){app.innerHTML=`<div class="page"><h1>نظام الفنيين</h1><div class="cards2">${state.meta.packages.map(p=>`<div class="card package"><h3>${p.name}</h3><strong>${p.amount} د.أ</strong><p>رصيد إضافي: ${p.bonus} د.أ</p><p>خصم كل طلب مكتمل: ${p.commission_per_order} د.أ</p></div>`).join('')}</div><br><button class="btn" onclick="register('technician')">سجل كفني الآن</button></div>`}
 function contact(){app.innerHTML=`<div class="page"><div class="card"><h1>تواصل معنا</h1><p class="muted">للاستفسار أو شحن رصيد الفنيين: 0790000000</p></div></div>`}
 function login(){app.innerHTML=`<div class="page"><div class="card" style="max-width:520px;margin:auto"><h1>تسجيل الدخول</h1><form class="form" onsubmit="doLogin(event)"><div class="field"><label>البريد الإلكتروني</label><input id="email" type="email" required></div><div class="field"><label>كلمة السر</label><input id="password" type="password" required></div><button class="btn">دخول</button><p class="muted">حساب الإدارة لا يظهر للعامة. اطلب بيانات الدخول من مالك المنصة.</p></form></div></div>`}
-async function doLogin(e){e.preventDefault();try{let j=await api('/api/auth/login',{method:'POST',body:JSON.stringify({email:email.value,password:password.value})});state.user=j.user;toast('تم تسجيل الدخول');dashboard()}catch(err){toast(err.message)}}
+async function doLogin(e){
+  e.preventDefault();
+
+  try{
+    const emailValue = email.value.trim().toLowerCase();
+    const passwordValue = password.value;
+
+    const fb = await getFirebaseAuth();
+
+    const cred = await fb.signInWithEmailAndPassword(
+      fb.auth,
+      emailValue,
+      passwordValue
+    );
+
+    await cred.user.reload();
+
+    if(!cred.user.emailVerified){
+      await fb.sendEmailVerification(cred.user);
+      throw new Error('فعّل بريدك الإلكتروني أولاً. تم إرسال رابط تفعيل جديد.');
+    }
+
+    let j = await api('/api/auth/login',{
+      method:'POST',
+      body:JSON.stringify({
+        email: emailValue,
+        password: passwordValue
+      })
+    });
+
+    state.user = j.user;
+    toast('تم تسجيل الدخول');
+    dashboard();
+
+  }catch(err){
+    toast(err.message || 'تعذر تسجيل الدخول');
+  }
+}
 function register(role='customer'){app.innerHTML=`<div class="page"><div class="card" style="max-width:760px;margin:auto"><h1>إنشاء حساب</h1><form class="form two" onsubmit="doRegister(event)"><div class="field"><label>نوع الحساب</label><select id="role" onchange="toggleTech()"><option value="customer">عميل</option><option value="technician">فني</option></select></div><div class="field"><label>الاسم الكامل</label><input id="name" placeholder="مثال: أحمد محمد" required minlength="2"></div><div class="field techOnly"><label>الصورة الشخصية للفني</label><input id="avatar" type="file" accept="image/png,image/jpeg,image/webp"><small class="muted">مطلوبة للفني فقط حتى يظهر للعميل بشكل موثوق.</small></div><div class="field"><label>البريد الإلكتروني</label><input id="remail" type="email" required></div><div class="field"><label>رقم الهاتف</label><input id="phone" placeholder="0791234567" required></div><div class="field"><label>كلمة السر</label><input id="rpassword" type="password" required minlength="8"></div><div class="field"><label>المحافظة</label><select id="city">${state.meta.cities.map(c=>`<option>${c}</option>`).join('')}</select></div><div class="field techOnly"><label>الرقم الوطني</label><input id="national" placeholder="10 أرقام"></div><div class="field techOnly"><label>الخدمات</label><select id="srv" multiple size="5">${state.meta.services.map(s=>`<option>${s.name}</option>`).join('')}</select></div><div class="field techOnly"><label>مناطق العمل</label><select id="areas" multiple size="5">${state.meta.cities.map(c=>`<option>${c}</option>`).join('')}</select></div><div></div><button class="btn">إنشاء الحساب</button></form></div></div>`;$('#role').value=role;toggleTech()}
 function toggleTech(){document.querySelectorAll('.techOnly').forEach(x=>x.style.display=$('#role').value==='technician'?'block':'none')}
 function vals(sel){return Array.from($(sel).selectedOptions||[]).map(o=>o.value)}
-async function doRegister(e){e.preventDefault();try{const role=$('#role').value;const fd=new FormData();fd.append('role',role);fd.append('name',$('#name').value.trim());fd.append('email',$('#remail').value.trim());fd.append('phone',$('#phone').value.trim());fd.append('password',$('#rpassword').value);fd.append('city',$('#city').value);fd.append('national_number',$('#national')?$('#national').value.trim():'');fd.append('services',vals('#srv').join(','));fd.append('areas',vals('#areas').join(','));if(role==='technician'&&!$('#avatar').files[0]) throw new Error('الرجاء اختيار صورة شخصية للفني');if($('#avatar')&&$('#avatar').files[0])fd.append('avatar',$('#avatar').files[0]);const j=await api('/api/auth/register',{method:'POST',body:fd});if(j.step==='verify'){showOtpScreen(j.email);}else{state.user=j.user;toast('تم إنشاء الحساب');dashboard();}}catch(err){toast(err.message)}}
+async function doRegister(e){
+  e.preventDefault();
+
+  try{
+    const role = $('#role').value;
+    const emailValue = $('#remail').value.trim().toLowerCase();
+    const passwordValue = $('#rpassword').value;
+    const phoneValue = $('#phone').value.trim();
+
+    if(!/^07[789]\d{7}$/.test(phoneValue)){
+      throw new Error('رقم الهاتف يجب أن يبدأ بـ 077 أو 078 أو 079');
+    }
+
+    if(role === 'technician' && !$('#avatar').files[0]){
+      throw new Error('الرجاء اختيار صورة شخصية للفني');
+    }
+
+    const fb = await getFirebaseAuth();
+    alert('FIREBASE OK');
+    console.log(fb);
+
+    const cred = await fb.createUserWithEmailAndPassword(
+      fb.auth,
+      emailValue,
+      passwordValue
+    );
+
+    await fb.sendEmailVerification(cred.user);
+
+    const fd = new FormData();
+
+    fd.append('role', role);
+    fd.append('name', $('#name').value.trim());
+    fd.append('email', emailValue);
+    fd.append('phone', phoneValue);
+    fd.append('password', passwordValue);
+    fd.append('city', $('#city').value);
+
+    fd.append(
+      'national_number',
+      $('#national') ? $('#national').value.trim() : ''
+    );
+
+    fd.append('services', vals('#srv').join(','));
+    fd.append('areas', vals('#areas').join(','));
+
+    if($('#avatar') && $('#avatar').files[0]){
+      fd.append('avatar', $('#avatar').files[0]);
+    }
+
+    await api('/api/auth/register', {
+      method: 'POST',
+      body: fd
+    });
+    await api('/api/auth/logout', { method:'POST' }).catch(()=>{});
+    state.user = null;
+    toast('تم إنشاء الحساب. تم إرسال رابط تفعيل إلى بريدك الإلكتروني.');
+    go('login');
+
+  }catch(err){
+    toast(err.message || 'تعذر إنشاء الحساب');
+  }
+}
 // ── OTP Verification Screen ───────────────────────────────────────────────
 function showOtpScreen(email) {
   state._pendingOtpEmail = email;
@@ -68,7 +197,8 @@ function showOtpScreen(email) {
     <p class="muted" style="margin-bottom:24px">أرسلنا كود مكون من 6 أرقام إلى<br><b>${email}</b></p>
     <form class="form" onsubmit="doVerifyOtp(event)">
       <div class="field">
-        <input id="otpInput" type="text" inputmode="numeric" maxlength="6" placeholder="أدخل الكود" required
+        <input id="otpInput" type="text" inputmode="numeric" maxlength="6" placeholder="● ● ● ● ● ●" required
+          oninput="this.value=this.value.replace(/[^0-9]/g,'')"
           style="text-align:center;font-size:28px;font-weight:900;letter-spacing:10px;padding:16px">
       </div>
       <button class="btn" style="width:100%">تأكيد الحساب</button>
@@ -321,7 +451,69 @@ createReq=async function(e){e.preventDefault();try{await api('/api/requests',{me
 nearbyPage=function(){return `<div class="card bluehint"><h2>الفنيين الأقرب لك</h2><p class="muted">اختر المحافظة والمنطقة، ثم الخدمة المطلوبة. النظام يطابق الفنيين حسب مناطق عملهم وتقييمهم.</p><div class="form three"><div class="field"><label>الخدمة</label><select id="nservice" onchange="loadNearby()">${state.meta.services.map(s=>`<option>${s.name}</option>`).join('')}</select></div><div class="field"><label>المحافظة</label><select id="ncity" onchange="bindAreaSelect('ncity','narea');loadNearby()">${governorateOptions(state.user?.city||'عمان')}</select></div><div class="field"><label>المنطقة</label><select id="narea" onchange="loadNearby()"></select></div><button class="btn ghost" onclick="useGPS('near')">📍 تحديد موقعي GPS</button></div><div id="nearMap">${mapBox(state.gps?.lat,state.gps?.lng)}</div></div><br><div id="nearList" class="grid"></div>`}
 loadNearby=async function(){try{let service=$('#nservice')?.value||state.meta.services[0]?.name, city=$('#ncity')?.value||state.user.city||'عمان', area=$('#narea')?.value||'';let j=await api(`/api/technicians?service=${encodeURIComponent(service)}&city=${encodeURIComponent(city)}&lat=${state.gps?.lat||''}&lng=${state.gps?.lng||''}`);let techs=(j.technicians||[]).filter(t=>!area||area==='أخرى'||String(t.areas||'').includes(area)||String(t.city||'').includes(city));let box=$('#nearList'); if(!box)return; box.innerHTML=techs.length?techs.map(t=>`<div class="card techcard"><div class="techhead">${t.avatar_url?`<img class="techAvatar" src="${_safeSrc(t.avatar_url)}" onerror="this.outerHTML='<div class=\'techAvatar fallback\'>ف</div>'">`:`<div class="techAvatar fallback">ف</div>`}<div><h3>${_x(t.name||'-')}</h3><div>${stars(t.rating_avg)} <small class="muted">(${t.rating_count||0} تقييم)</small></div></div></div><p><b>الخدمات:</b> ${_x(t.services||'-')}</p><p><b>المحافظة:</b> ${_x(t.city||'-')}</p><p><b>المناطق:</b> ${_x(t.areas||'-')}</p><p><b>أعمال مكتملة:</b> ${t.completed_jobs||0}</p><span class="status">مناسب لـ ${_x(city)}${area?' - '+_x(area):''}</span></div>`).join(''):`<div class="card empty">لا يوجد فنيين مناسبين حالياً لهذه الخدمة والمنطقة.</div>`}catch(e){toast(e.message)}}
 register=function(role='customer'){app.innerHTML=`<div class="page"><div class="card" style="max-width:860px;margin:auto"><h1>إنشاء حساب</h1><form class="form two" onsubmit="doRegister(event)"><div class="field"><label>نوع الحساب</label><select id="role" onchange="toggleTech()"><option value="customer">عميل</option><option value="technician">فني</option></select></div><div class="field"><label>الاسم الكامل</label><input id="name" placeholder="مثال: أحمد محمد" required minlength="2"></div><div class="field techOnly"><label>الصورة الشخصية للفني</label><input id="avatar" type="file" accept="image/png,image/jpeg,image/webp"><small class="muted">مطلوبة للفني فقط حتى يظهر للعميل بشكل موثوق.</small></div><div class="field"><label>البريد الإلكتروني</label><input id="remail" type="email" required></div><div class="field"><label>رقم الهاتف</label><input id="phone" placeholder="0791234567" required></div><div class="field"><label>كلمة السر</label><input id="rpassword" type="password" required minlength="8"></div><div class="field"><label>المحافظة</label><select id="city">${governorateOptions('عمان')}</select></div><div class="field"><label>منطقة السكن</label><select id="customerArea"></select></div><div class="field techOnly"><label>الرقم الوطني</label><input id="national" placeholder="10 أرقام"></div><div class="field techOnly"><label>الخدمات</label><select id="srv" multiple size="5">${state.meta.services.map(s=>`<option>${s.name}</option>`).join('')}</select></div><div class="field techOnly"><label>مناطق العمل</label><select id="areas" multiple size="7"></select><small class="muted">اختر أكثر من منطقة بزر Ctrl. تتغير حسب المحافظة.</small></div><button class="btn">إنشاء الحساب</button></form></div></div>`;$('#role').value=role;toggleTech();bindAreaSelect('city','customerArea');const city=$('#city'), areas=$('#areas');function refreshWorkAreas(){areas.innerHTML=areaOptions(city.value).replace('<option value="أخرى">أخرى</option>','')}city.addEventListener('change',refreshWorkAreas);refreshWorkAreas();}
-doRegister=async function(e){e.preventDefault();try{const role=$('#role').value;const fd=new FormData();fd.append('role',role);fd.append('name',$('#name').value.trim());fd.append('email',$('#remail').value.trim());fd.append('phone',$('#phone').value.trim());fd.append('password',$('#rpassword').value);fd.append('city',$('#city').value);fd.append('national_number',$('#national')?$('#national').value.trim():'');fd.append('services',vals('#srv').join(','));fd.append('areas', role==='technician' ? vals('#areas').join(',') : (selectedArea('regArea','regAreaOther') || $('#regArea')?.value || ''));if(role==='technician'&&!$('#avatar').files[0]) throw new Error('الرجاء اختيار صورة شخصية للفني');if($('#avatar')&&$('#avatar').files[0])fd.append('avatar',$('#avatar').files[0]);const j=await api('/api/auth/register',{method:'POST',body:fd});if(j.step==='verify'){showOtpScreen(j.email);}else{state.user=j.user;toast('تم إنشاء الحساب');dashboard();}}catch(err){toast(err.message)}}
+doRegister = async function(e){
+  e.preventDefault();
+
+  try{
+    const role = $('#role').value;
+    const emailValue = $('#remail').value.trim().toLowerCase();
+    const passwordValue = $('#rpassword').value;
+    const phoneValue = $('#phone').value.trim();
+
+    const fb = await getFirebaseAuth();
+
+    const cred = await fb.createUserWithEmailAndPassword(
+      fb.auth,
+      emailValue,
+      passwordValue
+    );
+
+    await fb.sendEmailVerification(cred.user);
+
+    const fd = new FormData();
+
+    fd.append('role', role);
+    fd.append('name', $('#name').value.trim());
+    fd.append('email', emailValue);
+    fd.append('phone', phoneValue);
+    fd.append('password', passwordValue);
+    fd.append('city', $('#city').value);
+    fd.append('national_number', $('#national') ? $('#national').value.trim() : '');
+    fd.append('services', vals('#srv').join(','));
+
+    fd.append(
+      'areas',
+      role === 'technician'
+        ? vals('#areas').join(',')
+        : (selectedArea('regArea','regAreaOther') || $('#regArea')?.value || '')
+    );
+
+    if(role === 'technician' && !$('#avatar').files[0]){
+      throw new Error('الرجاء اختيار صورة شخصية للفني');
+    }
+
+    if($('#avatar') && $('#avatar').files[0]){
+      fd.append('avatar', $('#avatar').files[0]);
+    }
+
+    await api('/api/auth/register',{
+      method:'POST',
+      body:fd
+    });
+
+    await api('/api/auth/logout',{
+      method:'POST'
+    }).catch(()=>{});
+
+    state.user = null;
+
+    toast('تم إنشاء الحساب. تم إرسال رابط تفعيل إلى بريدك الإلكتروني.');
+    go('login');
+
+  }catch(err){
+    toast(err.message || 'تعذر إنشاء الحساب');
+  }
+}
 const __v8OldCustDash=custDash; custDash=async function(){await __v8OldCustDash(); if(state.tab==='dash') bindAreaSelect('qcity','qarea','qareaOtherWrap'); if(state.tab==='near'){bindAreaSelect('ncity','narea'); loadNearby();}}
 const __v8OldUseGPS=useGPS; useGPS=function(mode='near'){ if(!navigator.geolocation)return toast('المتصفح لا يدعم GPS'); navigator.geolocation.getCurrentPosition(pos=>{state.gps={lat:pos.coords.latitude.toFixed(6),lng:pos.coords.longitude.toFixed(6)};let c=cityFromGPS(pos.coords.latitude,pos.coords.longitude); if($('#ncity')){$('#ncity').value=c; bindAreaSelect('ncity','narea');} if($('#qcity')){$('#qcity').value=c; bindAreaSelect('qcity','qarea','qareaOtherWrap');} if($('#nearMap'))$('#nearMap').innerHTML=mapBox(state.gps.lat,state.gps.lng); if($('#requestMap'))$('#requestMap').innerHTML=mapBox(state.gps.lat,state.gps.lng); toast('تم تحديد موقعك: '+c); if(mode==='near')loadNearby();},()=>toast('لم يتم السماح بالوصول للموقع'),{enableHighAccuracy:true,timeout:10000});}
 
@@ -1264,17 +1456,39 @@ doRegister=async function(e){
       if(!avatar?.files?.[0]) throw new Error('الرجاء اختيار صورة شخصية للفني');
       fd.append('avatar',avatar.files[0]);
     }
-    const j=await api('/api/auth/register',{method:'POST',body:fd});
-    if(j.step==='verify'){
-      showOtpScreen(j.email);
-    } else {
-      v21ResetSessionForRole(j.user);
-      toast('تم إنشاء الحساب بنجاح');
-      dashboard();
-    }
-  }catch(err){ toast(err.message || 'تعذر إنشاء الحساب'); }
-}
+    const emailValue = v21El('remail').value.trim().toLowerCase();
+const passwordValue = v21El('rpassword').value;
 
+const fb = await getFirebaseAuth();
+
+alert('FIREBASE OK');
+
+const cred = await fb.createUserWithEmailAndPassword(
+  fb.auth,
+  emailValue,
+  passwordValue
+);
+
+await fb.sendEmailVerification(cred.user);
+
+await api('/api/auth/register',{
+  method:'POST',
+  body:fd
+});
+
+await api('/api/auth/logout',{
+  method:'POST'
+}).catch(()=>{});
+
+state.user = null;
+
+toast('تم إنشاء الحساب. تم إرسال رابط تفعيل إلى بريدك الإلكتروني.');
+go('login');
+    
+    }catch(err){
+      toast(err.message || 'تعذر إنشاء الحساب');
+    }
+    }
 function v21StatusCounts(rows){
   return {
     all: rows.length,
